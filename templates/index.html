@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Intelligent CPU Scheduler Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--border:#30363d;
+  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+  --blue:#58a6ff;--green:#3fb950;--orange:#d29922;--red:#f85149;
+  --purple:#bc8cff;--cyan:#39d353;--yellow:#e3b341;
+  --font:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
+.app{max-width:1100px;margin:0 auto;padding:1.5rem}
+.header{display:flex;align-items:center;gap:14px;padding:0 0 1.2rem;border-bottom:1px solid var(--border);margin-bottom:1.5rem}
+.logo{width:42px;height:42px;background:linear-gradient(135deg,#58a6ff,#bc8cff);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;font-weight:700;color:#0d1117;flex-shrink:0}
+.header h1{font-size:20px;font-weight:600}
+.header p{font-size:12px;color:var(--text2);margin-top:2px}
+.grid2{display:grid;grid-template-columns:360px 1fr;gap:1.5rem;align-items:start}
+@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.25rem}
+.panel+.panel{margin-top:1rem}
+.panel-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--text2);margin-bottom:1rem;display:flex;align-items:center;gap:6px}
+.panel-title::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--blue)}
+.form-row{margin-bottom:10px}
+.form-row label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px}
+.form-row input,.form-row select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border-color .15s}
+.form-row input:focus,.form-row select:focus{border-color:var(--blue)}
+.form-row select option{background:var(--bg3)}
+.form-inline{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{padding:8px 16px;border-radius:6px;border:none;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
+.btn-primary{background:var(--blue);color:#0d1117}.btn-primary:hover{background:#79b8ff}
+.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border)}.btn-secondary:hover{border-color:var(--blue);color:var(--blue)}
+.btn-danger{background:transparent;color:var(--red);border:1px solid var(--red);padding:3px 9px;font-size:11px}.btn-danger:hover{background:rgba(248,81,73,.1)}
+.btn-green{background:var(--green);color:#0d1117}.btn-green:hover{opacity:.85}
+.btn-ai{background:linear-gradient(135deg,#bc8cff,#58a6ff);color:#0d1117;font-weight:600}.btn-ai:hover{opacity:.9}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.process-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:1rem}
+.process-table th{background:var(--bg3);padding:6px 10px;text-align:left;color:var(--text2);font-weight:500;border-bottom:1px solid var(--border)}
+.process-table td{padding:7px 10px;border-bottom:1px solid rgba(48,54,61,.5)}
+.process-table tr:hover td{background:rgba(255,255,255,.02)}
+.pid-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-family:var(--mono);font-size:11px;font-weight:700}
+.algo-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1rem}
+.algo-tab{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer;transition:all .15s}
+.algo-tab.active{background:var(--bg3);border-color:var(--blue);color:var(--blue)}
+.algo-tab:hover:not(.active){color:var(--text)}
+.quantum-row{display:none;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:var(--text2)}
+.quantum-row.show{display:flex}
+.quantum-row input{width:70px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);font-size:13px;outline:none}
+.gantt-scroll{overflow-x:auto;background:var(--bg3);border-radius:8px;padding:12px}
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:1rem}
+@media(max-width:600px){.metrics-grid{grid-template-columns:repeat(2,1fr)}}
+.metric-card{background:var(--bg3);border-radius:8px;padding:14px;text-align:center}
+.metric-val{font-size:24px;font-weight:600;font-family:var(--mono);color:var(--blue)}
+.metric-lbl{font-size:11px;color:var(--text2);margin-top:4px}
+.process-table-wrap{margin-top:1.2rem;overflow-x:auto}
+.detail-table{width:100%;border-collapse:collapse;font-size:12px;min-width:500px}
+.detail-table th{background:var(--bg3);padding:7px 10px;text-align:right;color:var(--text2);font-weight:500;border-bottom:1px solid var(--border)}
+.detail-table th:first-child{text-align:left}
+.detail-table td{padding:7px 10px;border-bottom:1px solid rgba(48,54,61,.4);text-align:right;font-family:var(--mono);font-size:12px}
+.detail-table td:first-child{text-align:left;font-family:var(--font)}
+.compare-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:1rem}
+@media(max-width:700px){.compare-grid{grid-template-columns:repeat(2,1fr)}}
+.compare-card{background:var(--bg3);border-radius:8px;padding:14px;border:1px solid var(--border)}
+.compare-card .algo-name{font-size:13px;font-weight:600;margin-bottom:10px}
+.compare-card .c-val{font-family:var(--mono);font-size:18px;color:var(--blue);font-weight:600}
+.compare-card .c-lbl{font-size:10px;color:var(--text3);margin-top:2px}
+.compare-card.best{border-color:var(--green)}
+.best-badge{font-size:10px;background:rgba(63,185,80,.15);color:var(--green);padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:8px}
+.ai-box{background:linear-gradient(135deg,rgba(188,140,255,.07),rgba(88,166,255,.07));border:1px solid rgba(188,140,255,.3);border-radius:10px;padding:1.25rem;margin-top:1.2rem}
+.ai-title{font-size:12px;font-weight:600;color:var(--purple);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.ai-content{font-size:13px;line-height:1.75;color:var(--text2);white-space:pre-wrap}
+.ai-loading{display:flex;gap:4px;align-items:center;color:var(--text3);font-size:13px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--purple);animation:pulse 1.2s ease-in-out infinite}
+.dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,80%,100%{opacity:.3}40%{opacity:1}}
+.tabs-main{display:flex;gap:0;margin-bottom:1.5rem;border-bottom:1px solid var(--border)}
+.tab-main{padding:9px 20px;border:none;background:none;color:var(--text2);font-family:var(--font);font-size:13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.tab-main.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab-main:hover:not(.active){color:var(--text)}
+.tab-content{display:none}.tab-content.active{display:block}
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--text3);font-size:13px}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px}
+.bar-label{width:60px;text-align:right;color:var(--text2);font-family:var(--mono);font-size:12px}
+.bar-track{flex:1;height:22px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.bar-val{width:45px;color:var(--text);font-family:var(--mono);font-size:11px}
+.section-lbl{font-size:12px;color:var(--text2);margin:1rem 0 10px;padding-top:10px;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="logo">CPU</div>
+    <div>
+      <h1>Intelligent CPU Scheduler Simulator</h1>
+      <p>FCFS · SJF · Round Robin · Priority Scheduling · AI Analysis</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <div class="panel">
+        <div class="panel-title">Add Process</div>
+        <div class="form-inline">
+          <div class="form-row"><label>Process ID</label><input type="text" id="pid" placeholder="P1" maxlength="5"/></div>
+          <div class="form-row"><label>Priority <span style="color:var(--text3);font-size:10px">(1=highest)</span></label><input type="number" id="pr" min="1" max="20" value="1"/></div>
+        </div>
+        <div class="form-inline">
+          <div class="form-row"><label>Arrival Time</label><input type="number" id="at" min="0" value="0"/></div>
+          <div class="form-row"><label>Burst Time</label><input type="number" id="bt" min="1" value="4"/></div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="addProcess()">+ Add Process</button>
+          <button class="btn btn-secondary" onclick="loadSample()">Load Sample</button>
+          <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Process Queue</div>
+        <table class="process-table" id="proc-table">
+          <thead><tr><th>PID</th><th>Arrival</th><th>Burst</th><th>Priority</th><th></th></tr></thead>
+          <tbody id="proc-body"></tbody>
+        </table>
+        <div id="empty-queue" style="text-align:center;padding:1.5rem;color:var(--text3);font-size:12px">No processes added yet</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Algorithm Selection</div>
+        <div class="algo-tabs">
+          <button class="algo-tab active" onclick="setAlgo('fcfs',this)">FCFS</button>
+          <button class="algo-tab" onclick="setAlgo('sjf',this)">SJF</button>
+          <button class="algo-tab" onclick="setAlgo('rr',this)">Round Robin</button>
+          <button class="algo-tab" onclick="setAlgo('priority',this)">Priority</button>
+          <button class="algo-tab" onclick="setAlgo('compare',this)">Compare All</button>
+        </div>
+        <div class="quantum-row" id="qrow">
+          Time Quantum: <input type="number" id="quantum" min="1" max="20" value="2"/> ms
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-green" onclick="runScheduler()">▶ Run Scheduler</button>
+          <button class="btn btn-ai" onclick="runAI()">✦ AI Analyze</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="tabs-main">
+        <button class="tab-main active" onclick="showTab('gantt',this)">Gantt Chart</button>
+        <button class="tab-main" onclick="showTab('metrics',this)">Metrics</button>
+        <button class="tab-main" onclick="showTab('compare',this)">Compare</button>
+        <button class="tab-main" onclick="showTab('barchart',this)">Bar Chart</button>
+      </div>
+      <div id="tab-gantt" class="tab-content active">
+        <div id="gantt-area"><div class="empty-state">Run the scheduler to see the Gantt chart</div></div>
+      </div>
+      <div id="tab-metrics" class="tab-content">
+        <div id="metrics-area"><div class="empty-state">Run the scheduler to see performance metrics</div></div>
+      </div>
+      <div id="tab-compare" class="tab-content">
+        <div id="compare-area"><div class="empty-state">Select "Compare All" and run to compare all algorithms</div></div>
+      </div>
+      <div id="tab-barchart" class="tab-content">
+        <div id="barchart-area"><div class="empty-state">Run the scheduler to see bar charts</div></div>
+      </div>
+      <div id="ai-area" style="display:none" class="ai-box">
+        <div class="ai-title">✦ AI Analysis</div>
+        <div id="ai-content" class="ai-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS=['#58a6ff','#bc8cff','#3fb950','#d29922','#f78166','#39d353','#e3b341','#ff7b72','#79b8ff','#d2a8ff'];
+let processes=[], currentAlgo='fcfs', lastResult=null;
+
+function getPidColor(pid){return COLORS[processes.findIndex(p=>p.pid===pid)%COLORS.length];}
+function algoLabel(a){return{fcfs:'First Come First Served',sjf:'Shortest Job First',rr:'Round Robin',priority:'Priority Scheduling',compare:'All Algorithms'}[a]||a;}
+
+function setAlgo(a,el){
+  currentAlgo=a;
+  document.querySelectorAll('.algo-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('qrow').classList.toggle('show',a==='rr');
+}
+
+function showTab(t,el){
+  document.querySelectorAll('.tab-main').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+t).classList.add('active');
+}
+
+function addProcess(){
+  const pid=document.getElementById('pid').value.trim()||('P'+(processes.length+1));
+  const at=parseInt(document.getElementById('at').value)||0;
+  const bt=parseInt(document.getElementById('bt').value)||1;
+  const pr=parseInt(document.getElementById('pr').value)||1;
+  if(processes.find(p=>p.pid===pid)){alert('PID already exists');return;}
+  if(bt<1){alert('Burst time must be at least 1');return;}
+  processes.push({pid,arrival_time:at,burst_time:bt,priority:pr});
+  document.getElementById('pid').value='P'+(processes.length+1);
+  document.getElementById('at').value='0';
+  renderTable();
+}
+
+function removeProcess(pid){processes=processes.filter(p=>p.pid!==pid);renderTable();}
+function clearAll(){processes=[];renderTable();}
+
+function renderTable(){
+  const tbody=document.getElementById('proc-body');
+  const empty=document.getElementById('empty-queue');
+  tbody.innerHTML='';
+  empty.style.display=processes.length===0?'block':'none';
+  processes.forEach((p,i)=>{
+    const c=COLORS[i%COLORS.length];
+    tbody.innerHTML+=`<tr>
+      <td><span class="pid-badge" style="background:${c}22;color:${c}">${p.pid}</span></td>
+      <td>${p.arrival_time}</td><td>${p.burst_time}</td><td>${p.priority}</td>
+      <td><button class="btn btn-danger" onclick="removeProcess('${p.pid}')">✕</button></td>
+    </tr>`;
+  });
+}
+
+function loadSample(){
+  processes=[
+    {pid:'P1',arrival_time:0,burst_time:6,priority:2},
+    {pid:'P2',arrival_time:1,burst_time:4,priority:1},
+    {pid:'P3',arrival_time:2,burst_time:8,priority:3},
+    {pid:'P4',arrival_time:3,burst_time:3,priority:2},
+    {pid:'P5',arrival_time:4,burst_time:5,priority:1},
+  ];
+  renderTable();
+}
+
+// --- SCHEDULING ALGORITHMS ---
+function fcfs(procs){
+  let sorted=[...procs].sort((a,b)=>a.arrival_time-b.arrival_time);
+  let time=0,gantt=[],ct={};
+  for(let p of sorted){
+    if(time<p.arrival_time)time=p.arrival_time;
+    let s=time;time+=p.burst_time;
+    gantt.push({pid:p.pid,start:s,end:time});ct[p.pid]=time;
+  }
+  return computeMetrics(procs,gantt,ct);
+}
+
+function sjf(procs){
+  let rem=[...procs],time=0,gantt=[],ct={},done=new Set();
+  while(done.size<procs.length){
+    let avail=rem.filter(p=>p.arrival_time<=time&&!done.has(p.pid));
+    if(!avail.length){time=Math.min(...rem.filter(p=>!done.has(p.pid)).map(p=>p.arrival_time));continue;}
+    let p=avail.reduce((a,b)=>a.burst_time<b.burst_time||(a.burst_time===b.burst_time&&a.arrival_time<b.arrival_time)?a:b);
+    let s=time;time+=p.burst_time;
+    gantt.push({pid:p.pid,start:s,end:time});ct[p.pid]=time;done.add(p.pid);
+  }
+  return computeMetrics(procs,gantt,ct);
+}
+
+function roundRobin(procs,q){
+  let rem=procs.map(p=>({...p,remaining:p.burst_time}));
+  let time=0,gantt=[],ct={},done=new Set(),queue=[],arrived=new Set();
+  let sorted=[...rem].sort((a,b)=>a.arrival_time-b.arrival_time);
+  let map=Object.fromEntries(rem.map(p=>[p.pid,p]));
+  sorted.filter(p=>p.arrival_time<=time).forEach(p=>{queue.push(p.pid);arrived.add(p.pid);});
+  let guard=0;
+  while(done.size<procs.length&&guard++<100000){
+    if(!queue.length){
+      let nxt=rem.filter(p=>!done.has(p.pid)&&!arrived.has(p.pid));
+      if(!nxt.length)break;
+      time=Math.min(...nxt.map(p=>p.arrival_time));
+      sorted.forEach(p=>{if(!arrived.has(p.pid)&&p.arrival_time<=time&&!done.has(p.pid)){queue.push(p.pid);arrived.add(p.pid);}});
+      continue;
+    }
+    let pid=queue.shift(),p=map[pid];
+    let run=Math.min(q,p.remaining),s=time;
+    time+=run;p.remaining-=run;
+    gantt.push({pid,start:s,end:time});
+    sorted.forEach(pp=>{if(!arrived.has(pp.pid)&&pp.arrival_time<=time&&pp.pid!==pid){queue.push(pp.pid);arrived.add(pp.pid);}});
+    if(p.remaining===0){ct[pid]=time;done.add(pid);}
+    else queue.push(pid);
+  }
+  return computeMetrics(procs,gantt,ct);
+}
+
+function priorityScheduling(procs){
+  let rem=[...procs],time=0,gantt=[],ct={},done=new Set();
+  while(done.size<procs.length){
+    let avail=rem.filter(p=>p.arrival_time<=time&&!done.has(p.pid));
+    if(!avail.length){time=Math.min(...rem.filter(p=>!done.has(p.pid)).map(p=>p.arrival_time));continue;}
+    let p=avail.reduce((a,b)=>a.priority<b.priority||(a.priority===b.priority&&a.arrival_time<b.arrival_time)?a:b);
+    let s=time;time+=p.burst_time;
+    gantt.push({pid:p.pid,start:s,end:time});ct[p.pid]=time;done.add(p.pid);
+  }
+  return computeMetrics(procs,gantt,ct);
+}
+
+function computeMetrics(procs,gantt,ct){
+  let wt={},tat={};
+  for(let p of procs){
+    let t=ct[p.pid];tat[p.pid]=t-p.arrival_time;wt[p.pid]=Math.max(0,tat[p.pid]-p.burst_time);
+  }
+  let n=procs.length;
+  let avgWT=Object.values(wt).reduce((a,b)=>a+b,0)/n;
+  let avgTAT=Object.values(tat).reduce((a,b)=>a+b,0)/n;
+  let totalTime=Math.max(...Object.values(ct))-Math.min(...procs.map(p=>p.arrival_time));
+  let busy=procs.reduce((a,p)=>a+p.burst_time,0);
+  let cpuUtil=totalTime>0?(busy/totalTime*100):100;
+  let endTime=Math.max(...Object.values(ct));
+  return{gantt,wt,tat,ct,avgWT,avgTAT,cpuUtil,throughput:n/endTime};
+}
+
+async function runScheduler(){
+  if(processes.length===0){alert('Add at least one process!');return;}
+  const q=parseInt(document.getElementById('quantum').value)||2;
+
+  // Try Flask backend first; fall back to in-browser JS algorithms
+  const useFlask = await checkFlaskAvailable();
+
+  if(useFlask){
+    await runSchedulerFlask(q);
+  } else {
+    runSchedulerJS(q);
+  }
+}
+
+async function checkFlaskAvailable(){
+  try{
+    const r=await fetch('/api',{method:'GET',signal:AbortSignal.timeout(800)});
+    return r.ok;
+  }catch(e){return false;}
+}
+
+async function runSchedulerFlask(q){
+  const btn=document.querySelector('.btn-green');
+  btn.textContent='⏳ Running...';btn.disabled=true;
+  try{
+    if(currentAlgo==='compare'){
+      const r=await fetch('/api/compare',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({quantum:q,processes})});
+      const results=await r.json();
+      if(results.error){throw new Error(results.error);}
+      renderCompare(results);
+      showTab('compare',document.querySelectorAll('.tab-main')[2]);
+    } else {
+      const r=await fetch('/api/schedule',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({algorithm:currentAlgo,quantum:q,processes})});
+      const result=await r.json();
+      if(result.error){throw new Error(result.error);}
+      lastResult=result;
+      renderGantt(result.gantt);
+      renderMetrics(result);
+      renderBarChart(result);
+      showTab('gantt',document.querySelector('.tab-main'));
+    }
+  }catch(e){
+    alert('Flask error: '+e.message+'. Falling back to browser mode.');
+    runSchedulerJS(q);
+  }finally{
+    btn.textContent='▶ Run Scheduler';btn.disabled=false;
+  }
+}
+
+function runSchedulerJS(q){
+  if(currentAlgo==='compare'){
+    const results={
+      fcfs:fcfs(processes),sjf:sjf(processes),
+      rr:roundRobin(processes,q),priority:priorityScheduling(processes)
+    };
+    renderCompare(results);
+    showTab('compare',document.querySelectorAll('.tab-main')[2]);
+    return;
+  }
+  let r;
+  if(currentAlgo==='fcfs')r=fcfs(processes);
+  else if(currentAlgo==='sjf')r=sjf(processes);
+  else if(currentAlgo==='rr')r=roundRobin(processes,q);
+  else r=priorityScheduling(processes);
+  lastResult=r;
+  renderGantt(r.gantt);
+  renderMetrics(r);
+  renderBarChart(r);
+  showTab('gantt',document.querySelector('.tab-main'));
+}
+
+function renderGantt(gantt){
+  const maxT=gantt[gantt.length-1].end;
+  const W=Math.max(680,maxT*24),H=86,pad=10,barH=40;
+  const scale=(W-pad*2)/maxT;
+  let svg=`<div class="gantt-scroll"><svg width="${W}" height="${H+20}" viewBox="0 0 ${W} ${H+20}" style="display:block">`;
+  svg+=`<text x="${pad}" y="18" font-size="11" fill="#8b949e" font-family="Space Grotesk">${algoLabel(currentAlgo)}</text>`;
+  gantt.forEach((g,i)=>{
+    const x=pad+g.start*scale,w=(g.end-g.start)*scale;
+    const c=getPidColor(g.pid);
+    svg+=`<rect x="${x}" y="24" width="${Math.max(1,w-1)}" height="${barH}" rx="4" fill="${c}2a" stroke="${c}" stroke-width="1.5"/>`;
+    if(w>20)svg+=`<text x="${x+w/2}" y="49" text-anchor="middle" font-size="12" font-weight="700" fill="${c}" font-family="JetBrains Mono">${g.pid}</text>`;
+    svg+=`<text x="${x}" y="${H+16}" text-anchor="middle" font-size="9" fill="#6e7681" font-family="JetBrains Mono">${g.start}</text>`;
+    if(i===gantt.length-1)svg+=`<text x="${x+w}" y="${H+16}" text-anchor="middle" font-size="9" fill="#6e7681" font-family="JetBrains Mono">${g.end}</text>`;
+    svg+=`<line x1="${x}" y1="${H-2}" x2="${x}" y2="${H+8}" stroke="#30363d" stroke-width="1"/>`;
+  });
+  svg+=`<line x1="${pad}" y1="${H-2}" x2="${pad+maxT*scale}" y2="${H-2}" stroke="#30363d" stroke-width="1"/>`;
+  svg+='</svg></div>';
+  document.getElementById('gantt-area').innerHTML=svg;
+}
+
+function renderMetrics(r){
+  let html=`<div class="metrics-grid">
+    <div class="metric-card"><div class="metric-val">${r.avgWT.toFixed(2)}</div><div class="metric-lbl">Avg Waiting Time (ms)</div></div>
+    <div class="metric-card"><div class="metric-val">${r.avgTAT.toFixed(2)}</div><div class="metric-lbl">Avg Turnaround Time (ms)</div></div>
+    <div class="metric-card"><div class="metric-val" style="color:var(--green)">${r.cpuUtil.toFixed(1)}%</div><div class="metric-lbl">CPU Utilization</div></div>
+    <div class="metric-card"><div class="metric-val" style="color:var(--purple)">${r.throughput.toFixed(4)}</div><div class="metric-lbl">Throughput (proc/unit)</div></div>
+  </div>`;
+  html+=`<div class="process-table-wrap"><table class="detail-table">
+    <thead><tr><th>Process</th><th>Arrival</th><th>Burst</th><th>Priority</th><th>Completion</th><th>Waiting</th><th>Turnaround</th></tr></thead><tbody>`;
+  processes.forEach((p,i)=>{
+    const c=COLORS[i%COLORS.length];
+    html+=`<tr>
+      <td><span class="pid-badge" style="background:${c}22;color:${c}">${p.pid}</span></td>
+      <td>${p.arrival_time}</td><td>${p.burst_time}</td><td>${p.priority}</td>
+      <td>${r.ct[p.pid]??'-'}</td>
+      <td style="color:var(--orange)">${(r.wt[p.pid]??0).toFixed(0)}</td>
+      <td style="color:var(--blue)">${(r.tat[p.pid]??0).toFixed(0)}</td>
+    </tr>`;
+  });
+  html+='</tbody></table></div>';
+  document.getElementById('metrics-area').innerHTML=html;
+}
+
+function renderBarChart(r){
+  const mWT=Math.max(...Object.values(r.wt),1);
+  const mTAT=Math.max(...Object.values(r.tat),1);
+  let html='<div style="padding:1rem 0">';
+  html+='<div class="section-lbl" style="border-top:none;margin-top:0">Waiting Time per Process</div>';
+  processes.forEach((p,i)=>{
+    const c=COLORS[i%COLORS.length],v=r.wt[p.pid]??0;
+    html+=`<div class="bar-row"><div class="bar-label">${p.pid}</div><div class="bar-track"><div class="bar-fill" style="width:${v/mWT*100}%;background:${c}"></div></div><div class="bar-val">${v.toFixed(1)}</div></div>`;
+  });
+  html+='<div class="section-lbl">Turnaround Time per Process</div>';
+  processes.forEach((p,i)=>{
+    const c=COLORS[i%COLORS.length],v=r.tat[p.pid]??0;
+    html+=`<div class="bar-row"><div class="bar-label">${p.pid}</div><div class="bar-track"><div class="bar-fill" style="width:${v/mTAT*100}%;background:${c}88"></div></div><div class="bar-val">${v.toFixed(1)}</div></div>`;
+  });
+  html+='</div>';
+  document.getElementById('barchart-area').innerHTML=html;
+}
+
+function miniGantt(gantt){
+  const maxT=gantt[gantt.length-1].end,W=640,H=26,pad=0;
+  const scale=(W-pad*2)/maxT;
+  let svg=`<svg width="${W}" height="${H+14}" viewBox="0 0 ${W} ${H+14}" style="display:block">`;
+  gantt.forEach(g=>{
+    const x=pad+g.start*scale,w=(g.end-g.start)*scale;
+    const c=getPidColor(g.pid);
+    svg+=`<rect x="${x}" y="0" width="${Math.max(1,w-1)}" height="${H}" rx="3" fill="${c}2a" stroke="${c}" stroke-width="1"/>`;
+    if(w>16)svg+=`<text x="${x+w/2}" y="${H/2+4}" text-anchor="middle" font-size="10" fill="${c}" font-family="JetBrains Mono">${g.pid}</text>`;
+  });
+  svg+=`<line x1="0" y1="${H}" x2="${W}" y2="${H}" stroke="#30363d" stroke-width="0.5"/>`;
+  svg+=`<text x="0" y="${H+12}" font-size="8" fill="#6e7681" font-family="JetBrains Mono">0</text>`;
+  svg+=`<text x="${W}" y="${H+12}" text-anchor="end" font-size="8" fill="#6e7681" font-family="JetBrains Mono">${maxT}</text>`;
+  svg+='</svg>';
+  return svg;
+}
+
+function renderCompare(results){
+  const algos={fcfs:'FCFS',sjf:'SJF',rr:'Round Robin',priority:'Priority'};
+  const keys=Object.keys(results);
+  const bestWT=keys.reduce((a,b)=>results[a].avgWT<results[b].avgWT?a:b);
+  const bestTAT=keys.reduce((a,b)=>results[a].avgTAT<results[b].avgTAT?a:b);
+  let html=`<div style="font-size:12px;color:var(--text2);margin-bottom:12px">Lower waiting time and turnaround time = better performance</div>
+  <div class="compare-grid">`;
+  for(const[k,r] of Object.entries(results)){
+    const best=k===bestWT||k===bestTAT;
+    html+=`<div class="compare-card${best?' best':''}">
+      ${best?`<div class="best-badge">★ Best</div>`:''}
+      <div class="algo-name">${algos[k]}</div>
+      <div><div class="c-val">${r.avgWT.toFixed(2)}</div><div class="c-lbl">Avg Waiting</div></div>
+      <div style="margin-top:10px"><div class="c-val" style="color:var(--purple)">${r.avgTAT.toFixed(2)}</div><div class="c-lbl">Avg Turnaround</div></div>
+      <div style="margin-top:10px"><div class="c-val" style="color:var(--green);font-size:15px">${r.cpuUtil.toFixed(1)}%</div><div class="c-lbl">CPU Utilization</div></div>
+    </div>`;
+  }
+  html+='</div><div style="margin-top:1.5rem">';
+  for(const[k,r] of Object.entries(results)){
+    html+=`<div style="margin-bottom:14px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">${algos[k]}</div>${miniGantt(r.gantt)}</div>`;
+  }
+  html+='</div>';
+  document.getElementById('compare-area').innerHTML=html;
+}
+
+async function runAI(){
+  if(processes.length===0){alert('Add processes first!');return;}
+  const aiArea=document.getElementById('ai-area');
+  const aiContent=document.getElementById('ai-content');
+  aiArea.style.display='block';
+  aiContent.innerHTML=`<div class="ai-loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span style="margin-left:6px">Analyzing scheduling data...</span></div>`;
+  let ctx=lastResult
+    ?`Algorithm: ${algoLabel(currentAlgo)}\nProcesses: ${JSON.stringify(processes)}\nAvg Waiting Time: ${lastResult.avgWT.toFixed(2)}\nAvg Turnaround Time: ${lastResult.avgTAT.toFixed(2)}\nCPU Utilization: ${lastResult.cpuUtil.toFixed(1)}%\nGantt: ${JSON.stringify(lastResult.gantt)}`
+    :`Processes: ${JSON.stringify(processes)}`;
+  const prompt=`You are a CPU scheduling expert. Analyze this CPU scheduling simulation:\n${ctx}\n\nProvide:\n1. Brief explanation of the algorithm's behavior for this process set\n2. Key observations (starvation risk, fairness, idle time)\n3. Which algorithm is best for this workload and why\n4. One concrete optimization suggestion\n\nBe concise (150 words max), plain text, no markdown.`;
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await resp.json();
+    aiContent.textContent=data.content?.map(c=>c.text||'').join('')||'Analysis unavailable.';
+  }catch(e){
+    aiContent.textContent='AI analysis requires an Anthropic API key. Run the Flask backend (app.py) for server-side AI analysis, or open this file in claude.ai.';
+  }
+}
+
+loadSample();
+</script>
+</body>
+</html>
