@@ -362,23 +362,28 @@ function renderGantt(gantt){
 
 function renderMetrics(r){
   let html=`<div class="metrics-grid">
-    <div class="metric-card"><div class="metric-val">${r.avgWT.toFixed(2)}</div><div class="metric-lbl">Avg Waiting Time (ms)</div></div>
-    <div class="metric-card"><div class="metric-val">${r.avgTAT.toFixed(2)}</div><div class="metric-lbl">Avg Turnaround Time (ms)</div></div>
-    <div class="metric-card"><div class="metric-val" style="color:var(--green)">${r.cpuUtil.toFixed(1)}%</div><div class="metric-lbl">CPU Utilization</div></div>
-    <div class="metric-card"><div class="metric-val" style="color:var(--purple)">${r.throughput.toFixed(4)}</div><div class="metric-lbl">Throughput (proc/unit)</div></div>
+    <div class="metric-card"><div class="metric-val">${(r.avgWT || 0).toFixed(2)}</div><div class="metric-lbl">Avg Waiting Time (ms)</div></div>
+    <div class="metric-card"><div class="metric-val">${(r.avgTAT || 0).toFixed(2)}</div><div class="metric-lbl">Avg Turnaround Time (ms)</div></div>
+    <div class="metric-card"><div class="metric-val" style="color:var(--green)">${(r.cpuUtil || 0).toFixed(1)}%</div><div class="metric-lbl">CPU Utilization</div></div>
+    <div class="metric-card"><div class="metric-val" style="color:var(--purple)">${(r.throughput || 0).toFixed(4)}</div><div class="metric-lbl">Throughput (proc/unit)</div></div>
   </div>`;
+
   html+=`<div class="process-table-wrap"><table class="detail-table">
     <thead><tr><th>Process</th><th>Arrival</th><th>Burst</th><th>Priority</th><th>Completion</th><th>Waiting</th><th>Turnaround</th></tr></thead><tbody>`;
+
   processes.forEach((p,i)=>{
     const c=COLORS[i%COLORS.length];
     html+=`<tr>
       <td><span class="pid-badge" style="background:${c}22;color:${c}">${p.pid}</span></td>
-      <td>${p.arrival_time}</td><td>${p.burst_time}</td><td>${p.priority}</td>
-      <td>${r.ct[p.pid]??'-'}</td>
-      <td style="color:var(--orange)">${(r.wt[p.pid]??0).toFixed(0)}</td>
-      <td style="color:var(--blue)">${(r.tat[p.pid]??0).toFixed(0)}</td>
+      <td>${p.arrival_time}</td>
+      <td>${p.burst_time}</td>
+      <td>${p.priority}</td>
+      <td>${r.ct[p.pid] ?? '-'}</td>
+      <td style="color:var(--orange)">${((r.wt[p.pid] ?? 0)).toFixed(0)}</td>
+      <td style="color:var(--blue)">${((r.tat[p.pid] ?? 0)).toFixed(0)}</td>
     </tr>`;
   });
+
   html+='</tbody></table></div>';
   document.getElementById('metrics-area').innerHTML=html;
 }
@@ -450,7 +455,7 @@ async function runAI(){
   aiArea.style.display='block';
   aiContent.innerHTML=`<div class="ai-loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span style="margin-left:6px">Analyzing scheduling data...</span></div>`;
   let ctx=lastResult
-    ?`Algorithm: ${algoLabel(currentAlgo)}\nProcesses: ${JSON.stringify(processes)}\nAvg Waiting Time: ${lastResult.avgWT.toFixed(2)}\nAvg Turnaround Time: ${lastResult.avgTAT.toFixed(2)}\nCPU Utilization: ${lastResult.cpuUtil.toFixed(1)}%\nGantt: ${JSON.stringify(lastResult.gantt)}`
+?`Algorithm: ${algoLabel(currentAlgo)}\nProcesses: ${JSON.stringify(processes)}\nAvg Waiting Time: ${(lastResult?.avgWT || 0).toFixed(2)}\nAvg Turnaround Time: ${(lastResult?.avgTAT || 0).toFixed(2)}\nCPU Utilization: ${(lastResult?.cpuUtil || 0).toFixed(1)}%\nGantt: ${JSON.stringify(lastResult?.gantt || [])}`
     :`Processes: ${JSON.stringify(processes)}`;
   const prompt=`You are a CPU scheduling expert. Analyze this CPU scheduling simulation:\n${ctx}\n\nProvide:\n1. Brief explanation of the algorithm's behavior for this process set\n2. Key observations (starvation risk, fairness, idle time)\n3. Which algorithm is best for this workload and why\n4. One concrete optimization suggestion\n\nBe concise (150 words max), plain text, no markdown.`;
   try{
