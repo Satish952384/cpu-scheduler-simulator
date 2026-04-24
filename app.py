@@ -224,4 +224,4 @@ if __name__ == "__main__":
     print("  POST /api/schedule")
     print("  POST /api/compare")
     print("=" * 50)
-    app.run(debug=True, port=5000)
+    app.run(host="0.0.0.0", port=10000)
